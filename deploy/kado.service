@@ -1,0 +1,41 @@
+# kado.service — production 24/7: backend as a systemd service.
+# The swarm runs inside the API process (LOCAL_CRON=false in prod; QStash cron
+# pings POST /internal/cron/*). systemd keeps the process alive across reboots.
+#
+# Install:
+#   sudo cp deploy/kado.service /etc/systemd/system/kado.service
+#   # edit WorkingDirectory + EnvironmentFile paths below to your checkout
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now kado
+#   systemctl status kado
+#
+# Production cron (QStash schedules, one per task — see docs/setup.md operator
+# table). Each posts to {PUBLIC_BASE_URL}/internal/cron/<task>:
+#   growth_dispatch      */5 * * * *    (the send-window/cap spine)
+#   growth_report_due    0 * * * *      (hourly fan-out; weekly/monthly computed inside)
+#   growth_insights_due  0 6 * * *      (daily digest)
+#   growth_store_sync    0 * * * *
+#   growth_crm_retry     0 * * * *
+#   growth_indiamart_poll 0 * * * *
+#   approval_expiry      0 * * * *
+#   rollup               */15 * * * *
+[Unit]
+Description=Kado API + agent swarm
+After=network.target postgresql.service redis.service
+Wants=postgresql.service redis.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/kaaaado
+EnvironmentFile=/opt/kaaaado/.env
+# venv uvicorn; single process (run.md: one backend process only)
+ExecStart=/opt/kaaaado/.venv/bin/uvicorn app.api.main:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=5
+# graceful shutdown: finish in-flight jobs (main.py drains LocalQueue)
+TimeoutStopSec=60
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

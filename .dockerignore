@@ -1,0 +1,25 @@
+# Build context exclusions — secrets never leave the machine
+.env
+.env.*
+!.env.example
+secrets/
+
+.venv/
+node_modules/
+**/node_modules/
+dashboard/dist/
+
+.git/
+.github/
+
+data/
+*.log
+*.pid
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+
+*.md
+!README.md

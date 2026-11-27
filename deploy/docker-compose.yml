@@ -1,0 +1,79 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: context_agent
+    # the app must connect as a NON-owner role or FORCE ROW LEVEL SECURITY is
+    # bypassed and tenant isolation silently stops working. this init script
+    # creates the unprivileged `app` role the API connects as.
+    volumes:
+      - ./postgres-init.sql:/docker-entrypoint-initdb.d/10-app-role.sql:ro
+      - pgdata:/var/lib/postgresql/data
+    ports: [ "5432:5432" ]
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d context_agent" ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports: [ "6333:6333" ]
+    volumes:
+      - qdrantdata:/qdrant/storage
+
+  redis:
+    image: redis:7-alpine
+    ports: [ "6379:6379" ]
+
+  # one-shot: apply migrations/*.sql as the postgres OWNER (DDL needs owner
+  # privileges; the app role deliberately cannot create tables). Exits 0 when the
+  # schema is current, so it is safe to re-run on every `up`.
+  migrate:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    env_file: ../.env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:password@postgres:5432/context_agent
+    command: [ "python", "-m", "scripts.migrate" ]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    env_file: ../.env
+    environment:
+      # point the adapters at the sibling containers, overriding .env localhosts
+      DATABASE_URL: postgresql+asyncpg://app:password@postgres:5432/context_agent
+      VECTOR_BACKEND: qdrant
+      QDRANT_URL: http://qdrant:6333
+      CACHE_BACKEND: redis
+      REDIS_URL: redis://redis:6379
+      # inline queue + GROWTH_ENABLED is normally refused at startup; the demo
+      # stack runs the swarm locally via the DEMO_LOCAL=1 exception in .env.
+      # For the QStash topology instead, remove this override and leave
+      # PUBLIC_BASE_URL pointing at a reachable tunnel or deploy.
+      QUEUE_BACKEND: inline
+      STORAGE_BACKEND: local
+      PUBLIC_BASE_URL: http://localhost:8000
+      PORT: 8000
+    ports: [ "8000:8000" ]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+      redis:
+        condition: service_started
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  pgdata:
+  qdrantdata:

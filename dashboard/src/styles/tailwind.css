@@ -1,0 +1,193 @@
+/* Tailwind v4 entry + design tokens. Imported before the legacy app.css so
+   rebuilt (Tailwind) screens and not-yet-migrated (app.css) screens coexist.
+   The dashboard is LIGHT by default (chatbase-like), not OS-driven; a `.dark`
+   class on <html> opts into dark. */
+@layer theme, base, legacy, components, utilities, overrides;
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+
+  /* Surfaces */
+  --color-canvas: #f8fafc;
+  --color-surface: #ffffff;
+  --color-elevated: #ffffff;
+  /* One step *below* canvas, for wells that sit inside a card: transcript
+     backgrounds, code gutters, inset panels. Cards already own surface and
+     elevated, so a well previously had to borrow canvas and lost its edge
+     against the page. */
+  --color-sunken: #f5f7fa;
+  /* Reasoning/trace ink. Deliberately not brand blue: a trace line is
+     machine-provenance, not a call to action, and the two must not read the
+     same. Cyan-teal is the nearest hue that stays legible on both themes. */
+  --color-trace: #0e7490;
+  --color-trace-soft: #ecfeff;
+  /* Text */
+  --color-ink: #0f172a;
+  --color-muted: #475569;
+  --color-faint: #94a3b8;
+  /* Borders */
+  --color-line: #e2e8f0;
+  --color-line-strong: #cbd5e1;
+  /* Near-black primary button */
+  --color-primary: #0f172a;
+  --color-primary-fg: #ffffff;
+  --color-primary-hover: #1e293b;
+  /* Brand blue */
+  --color-brand: #2563eb;
+  --color-brand-hover: #1d4ed8;
+  --color-brand-fg: #ffffff;
+  --color-brand-soft: #eff6ff;
+  /* Status */
+  --color-ok: #059669;
+  --color-ok-soft: #ecfdf5;
+  --color-warn: #b45309;
+  --color-warn-soft: #fef3c7;
+  --color-warn-border: #fcd34d;
+  --color-danger: #dc2626;
+  --color-danger-soft: #fee2e2;
+  /* Orange accent */
+  --color-accent: #f97316;
+  --color-accent-soft: #fff7ed;
+  --color-accent-fg: #ffffff;
+  /* Code / terminal surface — intentionally dark in BOTH themes (dark code block
+     on a light dashboard is the deliberate look), so it is not overridden below. */
+  --color-code: #0f1117;
+  --color-code-fg: #e6e8ee;
+
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-2xl: 22px;
+  --shadow-card: 0 1px 2px rgba(16,24,40,.05), 0 1px 3px rgba(16,24,40,.04);
+  --shadow-pop: 0 12px 32px rgba(16,24,40,.14), 0 2px 8px rgba(16,24,40,.06);
+}
+
+:root { color-scheme: light; }
+/* Dark neutral scale (Phase 0 — one palette). Why these values:
+   - --color-faint: #8b8b95 on --color-surface: #131316 ≈ 4.6:1 — clears WCAG
+     4.5:1 for the 11-12px labels that were 3.78:1.
+   - --color-brand-soft is now a translucent blue mix so focus:ring-4 and
+     active-nav bg-brand-soft are visible on dark.
+   - --color-brand: #60a5fa as text reads ~6.4:1 on surface, ~7.5:1 on canvas;
+     --color-brand-fg: #0b0b0d flips because white-on-#60a5fa is ~2.6:1.
+   - --color-code: #16161a separates the code surface from canvas #0b0b0d so
+     code blocks keep an edge (the @theme light --color-code:#0f1117 is
+     untouched — dark code block on light dashboard stays the light-mode look).
+   - Dark gets its own --shadow-card/--shadow-pop (heavy black + faint white
+     hairline) so cards/menus/toasts have elevation. */
+html.dark {
+  color-scheme: dark;
+  --color-canvas: #0b0b0d;
+  --color-surface: #131316;
+  --color-elevated: #1a1a1f;
+  --color-sunken: #0e0e11;
+  --color-trace: #22d3ee;
+  --color-trace-soft: color-mix(in srgb, #22d3ee 14%, transparent);
+  --color-ink: #fafafa;
+  --color-muted: #a1a1aa;
+  --color-faint: #8b8b95;
+  --color-line: #26262b;
+  --color-line-strong: #3a3a42;
+  --color-primary: #fafafa;
+  --color-primary-fg: #0b0b0d;
+  --color-primary-hover: #e4e4e7;
+  --color-brand: #60a5fa;
+  --color-brand-hover: #93c5fd;
+  --color-brand-fg: #0b0b0d;
+  --color-brand-soft: color-mix(in srgb, #60a5fa 16%, transparent);
+  --color-ok: #4ade80;
+  --color-ok-soft: color-mix(in srgb, #4ade80 14%, transparent);
+  --color-warn: #fbbf24;
+  --color-warn-soft: color-mix(in srgb, #fbbf24 14%, transparent);
+  --color-warn-border: color-mix(in srgb, #fbbf24 35%, transparent);
+  --color-danger: #f87171;
+  --color-danger-soft: color-mix(in srgb, #f87171 14%, transparent);
+  --color-accent: #fb923c;
+  --color-accent-soft: color-mix(in srgb, #fb923c 14%, transparent);
+  --color-code: #16161a;
+  --color-code-fg: #e4e4e7;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --shadow-pop: 0 16px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+/* Keyframes live OUTSIDE @theme on purpose. Tailwind v4 reads a `@keyframes`
+   inside `@theme` as a token namespace and silently emits nothing — the class
+   compiles, the element just never moves (§8.3 R10). Anything animated here is
+   opt-in per element and paired with `motion-reduce:animate-none` at the usage
+   site, because a global motion kill switch also kills the loading affordances
+   that tell a user work is still happening. */
+
+@keyframes ca-shimmer {
+  100% { transform: translateX(100%); }
+}
+
+/* Indeterminate progress rail. The travelling segment is 40% of the rail's
+   width, so these own-width percentages put its leading edge at -40% of the
+   rail and carry it to 140% — fully off both ends, no visible pop. */
+@keyframes ca-rail {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(250%); }
+}
+
+/* Arrival. 2px is deliberately small: a streamed token, a new trace row, or a
+   toast should register as "appeared" without the eye tracking a slide. */
+@keyframes ca-rise {
+  from { opacity: 0; transform: translateY(2px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* "Still working" for a thing that has no measurable progress. Bottoms out at
+   .55 rather than 0 so the element never reads as gone. */
+@keyframes ca-breathe {
+  0%, 100% { opacity: .55; }
+  50%      { opacity: 1; }
+}
+
+/* Caret blink. The per-keyframe steps(1, end) holds each state for its half of
+   the cycle, so the flip stays crisp on or off whatever easing the usage site
+   passes (the spec's `1.1s steps(2, start) infinite`) — an interpolated caret
+   at 50% opacity looks like a rendering bug, not a cursor. */
+@keyframes ca-blink {
+  0%  { opacity: 1; animation-timing-function: steps(1, end); }
+  50% { opacity: 0; animation-timing-function: steps(1, end); }
+}
+
+/* Per-agent identity. The element carrying `data-agent-identity` also carries
+   `--agent-color` as an inline style (see lib/agentIdentity.ts); everything
+   below is derived from it, so one attribute + one variable tints a whole
+   subtree. Derivation is CSS, not JS, because the mix has to follow the theme
+   without a re-render. */
+[data-agent-identity] {
+  --agent-tint: color-mix(in srgb, var(--agent-color) 12%, var(--color-canvas));
+  --agent-hairline: color-mix(in srgb, var(--agent-color) 22%, transparent);
+  --agent-ink: var(--agent-color);
+}
+/* Dark mode needs a heavier mix off a darker base, and the ink lightened: the
+   same hue that reads as a confident accent on white goes muddy on #14171d. */
+.dark [data-agent-identity] {
+  --agent-tint: color-mix(in srgb, var(--agent-color) 22%, var(--color-surface));
+  --agent-hairline: color-mix(in srgb, var(--agent-color) 32%, transparent);
+  --agent-ink: color-mix(in srgb, var(--agent-color) 78%, white);
+}
+
+html, body, #root { height: 100%; }
+body {
+  margin: 0; background: var(--color-canvas); color: var(--color-ink);
+  font-family: var(--font-sans); -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-size: 14px; line-height: 1.55;
+}
+* { border-color: var(--color-line); }
+::selection { background: var(--color-brand-soft); }
+
+/* Phase 0 item 8 fallback. Tailwind v4.3 inlines the @theme shadow values into the
+   shadow-card/shadow-pop utilities at build time (via --tw-shadow), so redefining
+   --shadow-card/--shadow-pop in html.dark alone does not elevate cards in dark.
+   This overrides layer (declared after utilities) forces the dark shadows under
+   html.dark, matching the dark-elevation goal the tokens were written for. */
+@layer overrides {
+  .dark .shadow-card { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.04); }
+  .dark .shadow-pop { box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.06); }
+}

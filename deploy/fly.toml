@@ -1,0 +1,49 @@
+# Fly.io deployment. Scale-to-zero friendly: the queue drives ingestion via HTTP
+# callbacks, so no always-on worker process is needed.
+#
+# Secrets are NOT set here — push them with `fly secrets set SECRET_KEY=... ` so
+# they never land in version control. This file only declares shape and scaling.
+# Before first boot: provision Postgres, Qdrant and Redis, run scripts/migrate.py,
+# then `fly deploy`.
+
+app = "agents-and-agents"
+primary_region = "iad"
+
+[build]
+  dockerfile = "deploy/Dockerfile"
+
+# apply pending migrations before each release cuts over. Runs with the app's
+# DATABASE_URL secret; the provisioned Postgres owner must allow DDL. A no-op
+# when the schema is already current.
+[deploy]
+  release_command = "python -m scripts.migrate"
+
+[env]
+  ENVIRONMENT = "production"
+  PORT = "8000"
+  LOG_JSON = "true"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  # scale to zero when idle; a request (or a QStash callback) wakes a machine.
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 40
+    hard_limit = 60
+
+  # the app's own liveness endpoint, so Fly does not route to a booting machine
+  [[http_service.checks]]
+    method = "GET"
+    path = "/health"
+    interval = "15s"
+    timeout = "2s"
+    grace_period = "10s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb"
