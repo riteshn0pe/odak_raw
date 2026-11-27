@@ -2,20 +2,19 @@
 
 B Swarm is a multi-tenant platform for lead research, personalized outreach, follow-ups, and customer support. A custom Python agent harness coordinates **13 implemented agents** through typed tool calls, shared business context, and scheduled jobs. Businesses can review outbound actions through configurable approval gates.
 
+![Overall B Swarm system design with the owner, agent orchestration, shared context, and business integrations](assets/workflow.jpg)
+
+**Overall system design.** When an owner asks for outreach, the swarm uses the business profile to guide research and carries those findings into drafts, replies, and follow-ups. The tenant's policy determines which outbound actions need approval.
+
 ![B Swarm agent map showing the orchestrator, specialist agents, triggers, and approval gates](assets/agent_diagram.jpg)
 
-*Agent map. Triggers and shared services are shown alongside agents. Status labels are illustrative.*
+**The 13-agent swarm.** Agents handle work from prospect research and support through reply triage, CRM sync, and reporting. The map also shows the triggers and shared services that connect their work. Status labels are illustrative.
 
-<details>
-<summary>Workflow and retrieval design diagrams</summary>
+![B Swarm retrieval design showing ingestion, hybrid search, evidence assembly, and answer checks](assets/rag_sys_design.jpg)
 
-![B Swarm workflow design from owner instructions through orchestration, shared context, and integrations](assets/workflow.jpg)
+**Retrieval for customer support.** The agent looks up both semantic and keyword matches in the business's own sources. Qdrant ranks those results together, and the support agent uses the retrieved passages to answer with citations.
 
-![B Swarm retrieval design from document ingestion through hybrid search and answer checks](assets/rag_sys_design.jpg)
-
-These are design sketches. In the implementation, outbound approval depends on tenant policy, and Qdrant collections are scoped by embedding model with tenant filters. Verification and privacy controls depend on the configured policy and integrations.
-
-</details>
+*The workflow and retrieval diagrams are design sketches. The implementation uses Qdrant collections organized by embedding model with tenant filters. Verification and privacy controls depend on policy and integrations.*
 
 ## How it works
 
